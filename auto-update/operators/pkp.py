@@ -1,5 +1,6 @@
 from .common import OperatorAdapter
 
+
 class PKPAdapter(OperatorAdapter, operator_id="PKP"):
     FIND_BOT_TRAINS_IN_GTFS = """
     SELECT DISTINCT BoT.trip_short_name as BoT_trip_name,

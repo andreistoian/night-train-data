@@ -2,3 +2,5 @@ pandas
 lxml
 requests
 beautifulsoup4
+openpyxl
+black

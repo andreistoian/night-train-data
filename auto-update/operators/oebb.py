@@ -1,5 +1,6 @@
 from .common import OperatorAdapter
 
+
 class OebbAdapter(OperatorAdapter, operator_id="OBB"):
 
     FIND_BOT_TRAINS_IN_GTFS = """
@@ -13,5 +14,5 @@ class OebbAdapter(OperatorAdapter, operator_id="OBB"):
     """
 
     pass
-    
-    #trains_in_this_gtfs = execute_query(db_file, FIND_BOT_TRAINS_IN_GTFS[country])
+
+    # trains_in_this_gtfs = execute_query(db_file, FIND_BOT_TRAINS_IN_GTFS[country])

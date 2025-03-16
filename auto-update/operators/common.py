@@ -2,7 +2,8 @@ import pandas
 from .utils import *
 from typing import Dict
 
-class OperatorAdapter():
+
+class OperatorAdapter:
 
     operator_id: str
 
@@ -14,15 +15,18 @@ class OperatorAdapter():
         if ext == ".zip":
             temp_dir = tempfile.mkdtemp(prefix="gtfs_")
             db_dir = tempfile.mkdtemp(prefix="gtfs_")
-            db_file = os.path.join(db_dir, "gtfs_database.sqlite")  # SQLite database file
-            print(f"Importing {datasource} to {db_file}")
+            self.db_file = os.path.join(
+                db_dir, "gtfs_database.sqlite"
+            )  # SQLite database file
+
+            print(f"Importing {datasource} to {self.db_file}")
 
             ensure_dir(db_dir)
 
             extract_gtfs(datasource, temp_dir)
-            import_gtfs_to_sqlite(db_file, temp_dir)
+            import_gtfs_to_sqlite(self.db_file, temp_dir)
 
-            add_bot_table(db_file, BoT_dataframe)
+            add_bot_table(self.db_file, BoT_dataframe)
 
     def __init_subclass__(cls, operator_id, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -31,8 +35,9 @@ class OperatorAdapter():
     def find_matching_bot_trains(self):
         pass
 
-    def get_train_timetable(self):
+    def get_train_timetable(self, operator_train_id):
         # Can return multiple timetables
         pass
-    
+
+
 OPERATOR_ADAPTERS: Dict[str, OperatorAdapter] = {}

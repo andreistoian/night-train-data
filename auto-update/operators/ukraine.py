@@ -13,8 +13,9 @@ from bs4 import BeautifulSoup
 
 from .common import OperatorAdapter
 
+
 class UkraineAdapter(OperatorAdapter, operator_id="UK"):
-    def __init__(self,  BoT_dataframe, datasource):
+    def __init__(self, BoT_dataframe, datasource):
         super().__init__(BoT_dataframe, datasource)
 
         self.df = BoT_dataframe
@@ -55,7 +56,7 @@ class UkraineAdapter(OperatorAdapter, operator_id="UK"):
         # Convert to DataFrame
         df = pd.DataFrame(rows, columns=headers)
         return df
-        
+
     def _get_trip_short_names(self):
         """Fetch distinct trip_short_name values from a CSV file where agency_id = 'UZ'."""
         df = self.df[self.df["agency_id"] == "UZ"]  # Filter where agency_id is 'UZ'
@@ -65,27 +66,33 @@ class UkraineAdapter(OperatorAdapter, operator_id="UK"):
             match = re.search(r"\d+", str(value))  # Find first number
             return match.group(0) if match else None  # Return the number or None
 
-        df["trip_short_name"] = df["trip_short_name"].apply(extract_number)  # Apply extraction
-        return df["trip_short_name"].dropna().unique().tolist()  # Get unique non-null numbers as 
+        df["trip_short_name"] = df["trip_short_name"].apply(
+            extract_number
+        )  # Apply extraction
+        return (
+            df["trip_short_name"].dropna().unique().tolist()
+        )  # Get unique non-null numbers as
 
     def _fetch_train_name(self, trip_short_name):
         """Query the URL to fetch the list of train names."""
         base_url = "https://uz.gov.ua/en/passengers/timetable/suggest-train/?q="
-        url = base_url + urllib.parse.quote(str(trip_short_name))  # Encode trip_short_name
-        
+        url = base_url + urllib.parse.quote(
+            str(trip_short_name)
+        )  # Encode trip_short_name
+
         try:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             train_list = response.json()
-            
+
             if not train_list:
                 print(f"No results for {trip_short_name}")
                 return None
-            
+
             unique_trains = set(train_list)  # Remove duplicates
-            
+
             return unique_trains  # Return the distinct train name
-        
+
         except requests.RequestException as e:
             print(f"Error fetching data for {trip_short_name}: {e}")
             return None
@@ -98,14 +105,13 @@ class UkraineAdapter(OperatorAdapter, operator_id="UK"):
             return final_url
         return None
 
-
     def get_all_night_trains_in_bot_db(self):
         trip_names = self._get_trip_short_names()
-    
+
         df_all_trains = None
         for trip_short_name in trip_names:
             distinct_trains = self._fetch_train_name(trip_short_name)
-            
+
             if distinct_trains:
                 for train_id in distinct_trains:
                     final_url = self._generate_train_url(train_id)
@@ -120,15 +126,16 @@ class UkraineAdapter(OperatorAdapter, operator_id="UK"):
                         if df_all_trains is None:
                             df_all_trains = df_train
                         else:
-                            df_all_trains = pd.concat([df_all_trains, df_train], ignore_index=True)
+                            df_all_trains = pd.concat(
+                                [df_all_trains, df_train], ignore_index=True
+                            )
 
                     except requests.RequestException as e:
                         print(f"Error fetching data for train {train_id}: {e}")
 
                     time.sleep(1)
-        
-        return df_all_trains
 
+        return df_all_trains
 
     def parse_train_table(html_content):
         """Extract train information from an HTML page and return it as a DataFrame."""

@@ -1,5 +1,6 @@
 from .common import OperatorAdapter
 
+
 class SJAdapter(OperatorAdapter, operator_id="SJ"):
     FIND_BOT_TRAINS_IN_GTFS = """
     SELECT * FROM 
