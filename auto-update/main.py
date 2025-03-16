@@ -37,9 +37,17 @@ for operator, schedule_file in SCHEDULE_FILES.items():
         parts = route_id.split("=")
         trains_to_check = list(map(lambda s: s.strip(), parts))
 
-        for train_id in trains["operator_train_id"].values:
-            if train_id in trains_to_check:
-                continue
-            print(train_id)
-            print(adapter.unique_days_of_week(train_id))
-            pass
+        for row_idx, train_row in trains.iterrows():
+            if train_row['BoT_trip_name'] in trains_to_check:                
+                train_id = train_row["operator_train_id"]
+                if train_id is not None:
+                    print(train_row['BoT_trip_name'])
+
+                    trip_for_route_train = BoT_data["trips"][BoT_data["trips"]["trip_short_name"].str.contains(train_row['BoT_trip_name'], case=False, na=False)]
+                    if not trip_for_route_train.empty:
+                        schedule_type = trip_for_route_train['service_id'].values[0]
+                        print("Current BoT schedule: ", schedule_type)
+
+                    print("Schedule from 2025 GTFS:", adapter.unique_days_of_week(train_id)[1])
+                    print("")
+                pass
