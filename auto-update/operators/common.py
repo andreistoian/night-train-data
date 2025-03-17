@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 from .utils import *
 from typing import Dict
 
@@ -7,7 +7,7 @@ class OperatorAdapter:
 
     operator_id: str
 
-    def __init__(self, BoT_dataframe: pandas.DataFrame, datasource: str):
+    def __init__(self, BoT_dataframe: pd.DataFrame, datasource: str):
         assert isinstance(datasource, str)
 
         _, ext = os.path.splitext(datasource)
@@ -33,11 +33,12 @@ class OperatorAdapter:
         OPERATOR_ADAPTERS[operator_id] = cls
 
     def find_matching_bot_trains(self):
-        pass
+        assert False, "Not implemented"
 
     def get_train_timetable(self, operator_train_id):
-        # Can return multiple timetables
-        pass
+        assert False, "Not implemented"
 
+    def unique_days_of_week(self, operator_train_id):
+        assert False, "Not implemented"
 
 OPERATOR_ADAPTERS: Dict[str, OperatorAdapter] = {}

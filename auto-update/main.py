@@ -11,8 +11,8 @@ SCHEDULE_FILES = {
     #    "SJ": "data/sweden-20250307.zip",
     #    "PKP": "data/pkpic.zip",
     #    "CFR": "data/sntfc-cfr-calatori-s.a_1303-tr_2025.xml",
-    "SNCF": "data/export-intercites-gtfs-last.zip",
-    #    "OBB": "data/GTFS_OP_2025_obb.zip",
+    # "SNCF": "data/export-intercites-gtfs-last.zip",
+        "ÖBB": "data/GTFS_OP_2025_obb.zip",
 }  # Path to your GTFS zip file
 
 sheet_names = ["agencies", "routes", "stops", "trips", "trip_stop"]
@@ -40,6 +40,7 @@ for operator, schedule_file in SCHEDULE_FILES.items():
         for row_idx, train_row in trains.iterrows():
             if train_row['BoT_trip_name'] in trains_to_check:                
                 train_id = train_row["operator_train_id"]
+                print(train_id)
                 if train_id is not None:
                     print(train_row['BoT_trip_name'])
 
