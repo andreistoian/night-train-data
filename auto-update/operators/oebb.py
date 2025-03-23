@@ -3,6 +3,7 @@ import pandas as pd
 from .utils import *
 from collections import Counter
 
+
 class OebbAdapter(OperatorAdapter, operator_id="ÖBB"):
 
     FIND_BOT_TRAINS_IN_GTFS = """
@@ -36,3 +37,7 @@ class OebbAdapter(OperatorAdapter, operator_id="ÖBB"):
     def find_matching_bot_trains(self):
         matching_trains = execute_query(self.db_file, self.FIND_BOT_TRAINS_IN_GTFS)
         return matching_trains
+
+    def extract_operator_format_train_ids(self, route_short_name):
+        trains = extract_first_matching_if_any(route_short_name, r"\b(EN|NJ) \d+\b")
+        return trains

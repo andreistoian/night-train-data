@@ -1,96 +1,76 @@
 from .common import OperatorAdapter
+from .utils import *
 
 
 class CFRAdapter(OperatorAdapter, operator_id="CFR"):
-    def __init__(self, BoT_dataframe, datasource):
+    FIND_BOT_TRAINS_IN_GTFS = """
+        SELECT  trips.trip_short_name || " " || trips.trip_id  as operator_train_id
+        FROM trips
+            WHERE trips.trip_short_name = 'IR-N' 
+        ORDER BY trip_short_name
+    """
+
+    FIND_UNIQUE_DEPARTURES_PER_TRAIN = """SELECT 
+            departure_time, 
+            group_concat(calendar_dates.date, ' ') as all_dates_with_same_departure 
+        FROM 
+	        trips 
+                INNER JOIN calendar_dates ON trips.service_id = calendar_dates.service_id
+	            INNER JOIN stop_times on stop_times.trip_id = trips.trip_id
+        WHERE trip_headsign=:train_id  AND stop_sequence = 0
+        GROUP BY departure_time
+        ORDER by calendar_dates.date;
+    """
+
+    CHECK_TRAIN_ALWAYS_HAS_SAME_NUMBER_OF_STOPS = """SELECT DISTINCT MAX(stop_sequence) FROM 
+        trips INNER JOIN calendar_dates ON trips.service_id = calendar_dates.service_id
+        INNER JOIN stop_times on stop_times.trip_id = trips.trip_id
+    WHERE trip_headsign=:train_id 
+    GROUP by stop_times.trip_id
+    ORDER by calendar_dates.date;"""
+
+    FIND_UNIQUE_ARRIVALS_PER_TRAIN = """
+    SELECT arrival_time FROM trips INNER JOIN stop_times on stop_times.trip_id = trips.trip_id 
+    WHERE stop_sequence = (
+        SELECT DISTINCT MAX(stop_sequence) FROM 
+            trips INNER JOIN calendar_dates ON trips.service_id = calendar_dates.service_id
+            INNER JOIN stop_times on stop_times.trip_id = trips.trip_id
+        WHERE trip_headsign=:train_id 
+        GROUP by stop_times.trip_id)
+    AND trip_headsign=:train_id"""
+
+    FIND_ALL_DEPARTURE_DATES = """
+        SELECT calendar_dates.date as date FROM 
+        trips INNER JOIN calendar_dates ON trips.service_id = calendar_dates.service_id
+        WHERE trip_id=:train_id
+        ORDER by calendar_dates.date;
+    """
+
+    def __init__(self, BoT_dataframe: pd.DataFrame, datasource: str):
         super().__init__(BoT_dataframe, datasource)
 
-        self.xml_file = datasource
-        assert (
-            isinstance(datasource, str) and ".xml" in datasource
-        ), "Romania adapter works only on XML files"
-        self.bot_df = BoT_dataframe
-
     def find_matching_bot_trains(self):
-        return self.cfr_find_irn_trains(self.xml_file)
+        matching_trains = execute_query(self.db_file, self.FIND_BOT_TRAINS_IN_GTFS)
+        matching_trains["operator_train_id"] = matching_trains[
+            "operator_train_id"
+        ].apply(extract_first_matching_if_any)
+        return matching_trains
 
-    #        results = []
-    #        for train_number in df_irn_cfr["Train Number"]:
-    #            train_route = cfr_get_train_route(schedule_file, train_number)
-    #            first_station, first_departure, last_station, last_arrival = cfr_get_train_timings(train_route)
-    ##            results.append({
-    #                "Train Number": train_number,
-    #                "Departure": first_station,
-    #                "Departure Time": first_departure,
-    #                "Arrival": last_station,
-    #                "Arrival Time": last_arrival,
-    #            })
+    def unique_days_of_week(self, operator_train_id):
+        df = execute_query(
+            self.db_file, self.FIND_ALL_DEPARTURE_DATES, train_id=operator_train_id
+        )
+        date_column = "date"
 
-    def cfr_get_train_route(xml_file, train_number):
-        """Fetches route details for a specific train number, excluding zero-stop entries."""
-        # Parse the XML file
-        tree = etree.parse(xml_file)
+        return unique_days_of_week_summary(df, date_column)
 
-        # Find the train with the given number
-        train = tree.xpath(f"//Tren[@Numar='{train_number}']")
-        if not train:
-            print(f"Train {train_number} not found.")
-            return pd.DataFrame()  # Return empty DataFrame if train not found
+    def get_train_timetable(self, operator_train_id):
+        departures = execute_query(
+            self.db_file, self.FIND_UNIQUE_DEPARTURES_PER_TRAIN, train_id=train_id
+        )
+        for row in departures.iterrows():
+            pass
 
-        train = train[0]  # Get the first matching train
-
-        # Find all <ElementTrasa> elements
-        elements = train.xpath(".//ElementTrasa")
-
-        # Extract relevant data, filtering out entries where StationareSecunde == "0"
-        data = []
-        for elem in elements:
-            departure_station = elem.get("DenStaOrigine")
-            arrival_station = elem.get("DenStaDestinatie")
-            departure_time = convert_seconds_to_time(elem.get("OraP"))
-            arrival_time = convert_seconds_to_time(elem.get("OraS"))
-            stop_time = int(elem.get("StationareSecunde", "0"))
-
-            data.append(
-                {
-                    "Arrival Station": arrival_station,
-                    "Arrival Time": arrival_time,
-                    "Departure Station": departure_station,
-                    "Departure Time": departure_time,
-                    "Stop Time (Sec)": stop_time,
-                }
-            )
-
-        # Convert to Pandas DataFrame
-        df = pd.DataFrame(data)
-
-        return df
-
-    def cfr_get_train_timings(train_route):
-        """Finds the first station's departure time, last station's arrival time,
-        first station name, and last station name."""
-        if train_route.empty:
-            return None, None, None, None
-
-        first_station = train_route.iloc[0]["Departure Station"]
-        first_departure = train_route.iloc[0]["Departure Time"]
-        last_station = train_route.iloc[-1]["Arrival Station"]
-        last_arrival = train_route.iloc[-1]["Arrival Time"]
-
-        return first_station, first_departure, last_station, last_arrival
-
-    def cfr_find_irn_trains(xml_file):
-        """Parses an XML file and returns a DataFrame with train numbers where CategorieTren='IR-N'."""
-        # Parse the XML file
-        tree = etree.parse(xml_file)
-
-        # Find all trains with CategorieTren="IR-N"
-        trains = tree.xpath("//Tren[@CategorieTren='IR-N']")
-
-        # Extract train numbers
-        train_numbers = [train.get("Numar") for train in trains]
-
-        # Convert to DataFrame
-        df = pd.DataFrame(train_numbers, columns=["Train Number"])
-
-        return df
+    def extract_operator_format_train_ids(self, route_short_name):
+        trains = extract_first_matching_if_any(route_short_name)
+        return trains

@@ -9,6 +9,7 @@ import re
 
 from collections import Counter
 
+
 def execute_query(db_path, query, **params):
     conn = sqlite3.connect(db_path)
 
@@ -78,7 +79,7 @@ def unique_days_of_week_summary(df, date_column):
     )
     df["week_end"] = df["week_start"] + pd.to_timedelta(6, unit="d")
     df["day_of_week"] = df[date_column].dt.dayofweek
-    
+
     # Map the day of the week numbers to day names
     day_mapping = {
         0: "Monday",
@@ -90,20 +91,20 @@ def unique_days_of_week_summary(df, date_column):
         6: "Sunday",
     }
     df["day_name"] = df["day_of_week"].map(day_mapping)
-    
+
     # Define the full set of days of the week
     all_days = set(day_mapping.values())
-    
+
     # Group by week start date and get unique days of the week for each week
     unique_days_per_week = df.groupby("week_start")["day_name"].unique()
-    
+
     # Create the result dictionary for each week
     week_results = {}
     for week_start, days in unique_days_per_week.items():
         week_end = week_start + pd.to_timedelta(6, unit="d")
         unique_days = set(days)
         missing_days = all_days - unique_days
-    
+
         if len(missing_days) == 0:
             pattern = "Every day"
         elif len(missing_days) <= 2:
@@ -122,24 +123,36 @@ def unique_days_of_week_summary(df, date_column):
                 ],
             )
             pattern = ", ".join(sorted_days)
-    
+
         week_results[week_start.strftime("%Y-%m-%d")] = {
             "week_start": week_start.date().strftime("%Y-%m-%d"),
             "week_end": week_end.date().strftime("%Y-%m-%d"),
             "pattern": pattern,
         }
-    
+
     # Determine the most common pattern for each week
     patterns = [info["pattern"] for info in week_results.values()]
     pattern_counts = Counter(patterns)
 
     if len(patterns) == 0:
         return {}, "Not scheduled"
-        
-    most_common_pattern, count = pattern_counts.most_common(1)[0]
-    
+
+    most_common_pat = pattern_counts.most_common(2)
+    most_common_pattern, count = most_common_pat[0]
+
     # Check if the most common pattern is the only pattern
     if count < len(patterns):
         most_common_pattern = f"Usually {most_common_pattern}"
-    
+
     return week_results, most_common_pattern
+
+
+def extract_first_matching_if_any(s, pattern=r"\d+\D?"):
+    # Search for the pattern in the string
+    match = re.search(pattern, s)
+
+    if match:
+        # Extract the number part from the match
+        return match.group(0)
+    else:
+        return s

@@ -3,6 +3,7 @@ import pandas as pd
 from .common import OperatorAdapter
 from .utils import *
 
+
 class SncfAdapter(OperatorAdapter, operator_id="SNCF"):
     FIND_BOT_TRAINS_IN_GTFS = """
     SELECT BoT.trip_short_name as BoT_trip_name,
@@ -71,3 +72,7 @@ class SncfAdapter(OperatorAdapter, operator_id="SNCF"):
         )
         for row in departures.iterrows():
             pass
+
+    def extract_operator_format_train_ids(self, route_short_name):
+        trains = extract_first_matching_if_any(route_short_name)
+        return trains

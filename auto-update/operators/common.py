@@ -41,4 +41,8 @@ class OperatorAdapter:
     def unique_days_of_week(self, operator_train_id):
         assert False, "Not implemented"
 
+    def extract_operator_format_train_ids(self, route_short_name):
+        return route_short_name
+
+
 OPERATOR_ADAPTERS: Dict[str, OperatorAdapter] = {}
